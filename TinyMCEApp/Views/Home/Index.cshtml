@@ -1,0 +1,242 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+    var templates = Html.Raw(ViewBag.Templates);
+    @model DocumentViewModel;
+
+}
+
+<div class="container-fluid">
+
+    <!-- Page Heading -->
+    <h1 class="h3 mb-4 text-gray-800">Editor</h1>
+
+    <div class="row">
+        <div class="col-lg-12">
+
+            <!-- Dropdown Card Example -->
+            <div class="card shadow mb-4">
+                <!-- Card Header - Dropdown -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Editor de Documento</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink" style="">
+                            <div class="dropdown-header">Dropdown Header:</div>
+                            <button type="button" onclick="salvar();" class="dropdown-item" href="#">Salvar</button>
+                            <a class="dropdown-item" onclick="exportToPdf();" href="#">Exportar</a>
+                            <a class="dropdown-item" onclick="salvar(true);" href="#">Salvar Como Template</a>
+                        </div>
+                    </div>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <form method="post">
+                        <textarea id="mytextarea">
+                            @(Model != null ? Html.Raw(Model.content) : "")
+
+                       </textarea>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+@section scripts{
+    <script>
+        window.onload = function () {
+            document.getElementsByClassName('tox-promotion')[0].style.display = 'none';
+        };
+
+        console.log(@templates)
+        var useDarkMode = window.matchMedia('(prefers-color-scheme: default)').matches;
+        //const templates = getTemplates();
+        tinymce.init({
+            selector: '#mytextarea',
+            language: 'pt_BR',
+            plugins: 'preview code importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image imagetools link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount textpattern noneditable help charmap quickbars emoticons',
+            menubar: 'file edit view insert format tools table help',
+            toolbar: 'undo redo | image code | image_upload | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist | forecolor backcolor removeformat | pagebreak | charmap emoticons | fullscreen  preview save print | insertfile image media template link anchor codesample | ltr rtl',
+            toolbar_sticky: true,
+            file_picker_types: 'image',
+            /* and here's our custom image picker*/
+            file_picker_callback: filePicker,
+            //images_upload_url: 'home/uploadimage',
+            //images_upload_handler: uploadFile,
+            autosave_ask_before_unload: false,
+            autosave_interval: '30s',
+            autosave_prefix: '{path}{query}-{id}-',
+            autosave_restore_when_empty: false,
+            autosave_retention: '2m',
+            image_advtab: true,
+            link_list: [
+                { title: 'My page 1', value: 'https://www.tiny.cloud' },
+                { title: 'My page 2', value: 'http://www.moxiecode.com' }
+            ],
+            image_list: [
+                { title: 'My page 1', value: 'https://www.tiny.cloud' },
+                { title: 'My page 2', value: 'http://www.moxiecode.com' }
+            ],
+            image_class_list: [
+                { title: 'None', value: '' },
+                { title: 'Some class', value: 'class-name' }
+            ],
+            importcss_append: true,
+            //file_picker_callback: function (callback, value, meta) {
+            //    /* Provide file and text for the link dialog */
+            //    if (meta.filetype === 'file') {
+            //        callback('https://www.google.com/logos/google.jpg', { text: 'My text' });
+            //    }
+
+            //    /* Provide image and alt text for the image dialog */
+            //    if (meta.filetype === 'image') {
+            //        callback('https://www.google.com/logos/google.jpg', { alt: 'My alt text' });
+            //    }
+
+            //    /* Provide alternative source and posted for the media dialog */
+            //    if (meta.filetype === 'media') {
+            //        callback('movie.mp4', { source2: 'alt.ogg', poster: 'https://www.google.com/logos/google.jpg' });
+            //    }
+            //},
+            //load templates
+            templates: @templates,
+            template_cdate_format: '[Date Created (CDATE): %m/%d/%Y : %H:%M:%S]',
+            template_mdate_format: '[Date Modified (MDATE): %m/%d/%Y : %H:%M:%S]',
+            height: 600,
+            image_caption: true,
+            quickbars_selection_toolbar: 'bold italic | quicklink h2 h3 blockquote quickimage quicktable',
+            noneditable_noneditable_class: 'mceNonEditable',
+            toolbar_mode: 'sliding',
+            contextmenu: 'link image table',
+            skin: useDarkMode ? 'oxide-dark' : 'oxide',
+            content_css: useDarkMode ? 'dark' : 'default',
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+        });
+        function salvar(isTemplate = false) {
+
+            var formData = new FormData();
+            name = prompt("Inserir o nome do template: ");
+            formData.append('name', name)
+            var myContent = tinymce.get("mytextarea").getContent({ format: "html" });
+            //console.log(myContent)
+            var endpoint = 'home/save';
+            var name = "";
+            if (isTemplate) {
+                endpoint = 'home/saveAsTemplate';
+                name = prompt("Inserir o nome do template: ");
+                formData.append('name', name)
+            }
+            //step 1
+            formData.append('content', myContent)
+
+            $.ajax({
+                url: endpoint,
+                method: "POST",
+                data: formData,
+                contentType: false,
+                dataType: 'json',
+                processData: false
+            }).done((res) => {
+                swal("Sucesso!", "Operação realizada com sucesso!", "success");
+            }).fail((res, status, error) => {
+                swal("Erro!", "Operação realizada sem sucesso!", "error");
+            }).always(() => {
+
+            })
+        }
+        const b64toBlob = (b64Data, contentType = '', sliceSize = 512) => {
+            const byteCharacters = atob(b64Data);
+            const byteArrays = [];
+
+            for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+                const slice = byteCharacters.slice(offset, offset + sliceSize);
+
+                const byteNumbers = new Array(slice.length);
+                for (let i = 0; i < slice.length; i++) {
+                    byteNumbers[i] = slice.charCodeAt(i);
+                }
+
+                const byteArray = new Uint8Array(byteNumbers);
+                byteArrays.push(byteArray);
+            }
+
+            const blob = new Blob(byteArrays, { type: contentType });
+            return blob;
+        }
+        function exportToPdf() {
+            var formData = new FormData();
+            var myContent = tinymce.get("mytextarea").getContent({ format: "html" });
+            formData.append('html', myContent)
+            var endpoint = 'home/exportToPDF'
+            $.ajax({
+                url: endpoint,
+                method: "POST",
+                data: formData,
+                contentType: false,
+                //dataType: 'blob',
+                processData: false
+            }).done((res) => {
+                const blob = b64toBlob(res, 'blob');
+                var a = document.createElement('a');
+                var url = window.URL.createObjectURL(blob);
+                a.href = url;
+                a.download = 'exportedFile.pdf';
+                document.body.append(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            }).fail((res, status, error) => {
+                return null;
+            }).always(() => {
+                return null;
+            })
+        }
+        function filePicker(cb, value, meta) {
+            //console.log(cb);
+            var input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            console.log(input);
+            input.addEventListener("change", function () {
+                var file = this.files[0];
+                var reader = new FileReader();
+                var formData = new FormData();
+                //var file = file[0];
+                formData.append("file", file);
+                formData.append('filetype', 'image');
+                jQuery.ajax({
+                    url: "home/uploadimage",
+                    type: "post",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    async: false,
+                    success: function (response, file) {
+                        console.log(response);
+                        var fileName = response.location;
+                        if (fileName) {
+                            cb(fileName, { title: file.name });
+                        }
+                        swal("Sucesso!", "Operação realizada com sucesso!", "success");
+                    }
+                });
+                reader.readAsDataURL(file);
+            });
+
+            //cb.addButton('image_upload', {
+            //    tooltip: 'Upload Image',
+            //    icon: 'image',
+            //    onclick: function () {
+            //        fileInput.trigger('click');
+            //    }
+            //});
+            input.click();
+        }
+
+
+
+    </script>
+}
